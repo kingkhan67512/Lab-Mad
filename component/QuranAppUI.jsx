@@ -1,10 +1,61 @@
-import React from 'react';
-import { View, Text, ScrollView, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import tw from 'twrnc';
-import TabNavigation from './TabNavigation';
+
+// Custom hook to fetch and store Quran data
+const useQuranData = () => {
+  const [quranData, setQuranData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch and store Quran data in AsyncStorage
+  useEffect(() => {
+    const fetchQuran = async () => {
+      try {
+        // Check if the data is already stored in AsyncStorage
+        const storedData = await AsyncStorage.getItem('quranData');
+        if (storedData) {
+          setQuranData(JSON.parse(storedData)); // If stored, set the data
+          setLoading(false);
+        } else {
+          // Fetch data from the API
+          const response = await fetch('https://api.alquran.cloud/v1/quran/en.asad');
+          const data = await response.json();
+          await AsyncStorage.setItem('quranData', JSON.stringify(data.data)); // Store the data
+          setQuranData(data.data);
+          setLoading(false);
+        }
+      } catch (err) {
+        setError('Failed to fetch Quran data');
+        setLoading(false);
+      }
+    };
+
+    fetchQuran();
+  }, []);
+
+  return { quranData, loading, error };
+};
 
 const QuranAppUI = () => {
+  const { quranData, loading, error } = useQuranData();
+  const [expandedSurah, setExpandedSurah] = useState(null); // To track which surah is expanded
+
+  // Toggle dropdown for a surah
+  const toggleSurah = (surahName) => {
+    setExpandedSurah(expandedSurah === surahName ? null : surahName); // Toggle between open and close
+  };
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="purple" />;
+  }
+
+  if (error) {
+    return <Text style={tw`text-red-500`}>{error}</Text>;
+  }
+
   return (
     <View style={tw`flex-1 bg-purple-100 p-4`}>
       {/* Header */}
@@ -17,60 +68,61 @@ const QuranAppUI = () => {
       <Text style={tw`text-lg font-semibold text-gray-800 mb-4`}>Assalamu Alaikum</Text>
       <Text style={tw`text-2xl font-bold text-purple-900 mb-8`}>Tanvir Ahassan</Text>
 
-      {/* Last Read */}
-      <View style={tw`bg-purple-200 rounded-lg p-4 mb-6 overflow-hidden shadow-lg`}>
       {/* Background Image */}
-      <Image 
-        source={{ uri: 'https://i.pinimg.com/736x/81/94/7f/81947f27675dab378e9e73c7d988f659.jpg' }} 
-        style={[tw`absolute bottom-[0.1] left-0 w-100 h-40`, { opacity: 0.6 }]}  // Set the image to cover the background with opacity
-        resizeMode="cover"   // Ensure the image covers the entire background
-      />
-
-      {/* Foreground Content */}
-      <View style={tw`flex-row justify-between items-center`}>
-        <Text style={tw`text-sm text-purple-800`}>Last Read</Text>
+      <View style={tw`bg-purple-200 rounded-lg p-4 mb-6 overflow-hidden shadow-lg`}>
+        <Image 
+          source={{ uri: 'https://i.pinimg.com/736x/81/94/7f/81947f27675dab378e9e73c7d988f659.jpg' }} 
+          style={[tw`absolute bottom-[0.1] left-0 w-100 h-40`, { opacity: 0.6 }]}  
+          resizeMode="cover" 
+        />
+        <View style={tw`flex-row justify-between items-center`}>
+          <Text style={tw`text-sm text-purple-800`}>Last Read</Text>
+        </View>
+        <Text style={tw`text-lg font-bold text-purple-900 mt-2`}>Al-Fatihah</Text>
+        <Text style={tw`text-sm text-purple-700`}>Ayah No: 1</Text>
       </View>
-      <Text style={tw`text-lg font-bold text-purple-900 mt-2`}>Al-Fatihah</Text>
-      <Text style={tw`text-sm text-purple-700`}>Ayah No: 1</Text>
-    </View>
-      {/* Surah List */}
+
       <ScrollView>
-        <TabNavigation/>
-        {/* Al-Fatihah */}
-        <View style={tw`bg-white rounded-lg p-4 mb-4 flex-row justify-between items-center shadow-sm`}>
-          <View>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Al-Fatihah</Text>
-            <Text style={tw`text-sm text-gray-600`}>Meccan - 7 Verses</Text>
+        {/* Surah Tab Navigation */}
+        <View style={tw`flex-row justify-around items-center mt-4 border-b border-gray-300 mb-5`}>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-purple-700 font-bold`}>Surah</Text>
+            <View style={tw`w-full h-1 bg-purple-700 mt-1`} />
           </View>
-          <Text style={tw`text-purple-800 text-xl`}>الفاتحة</Text>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-gray-600`}>Para</Text>
+          </View>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-gray-600`}>Page</Text>
+          </View>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-gray-600`}>Hijb</Text>
+          </View>
         </View>
 
-        {/* Al-Baqarah */}
-        <View style={tw`bg-white rounded-lg p-4 mb-4 flex-row justify-between items-center shadow-sm`}>
-          <View>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Al-Baqarah</Text>
-            <Text style={tw`text-sm text-gray-600`}>Medinian - 286 Verses</Text>
-          </View>
-          <Text style={tw`text-purple-800 text-xl`}>البقرة</Text>
-        </View>
+        {/* Surah List */}
+        {quranData && quranData.surahs.map((surah, index) => (
+          <TouchableOpacity key={surah.number} onPress={() => toggleSurah(surah.englishName)} style={tw`bg-white rounded-lg p-4 mb-4 shadow-sm`}>
+            <View style={tw`flex-row justify-between items-center`}>
+              <View>
+                <Text style={tw`text-lg font-semibold text-gray-800`}>{surah.englishName}</Text>
+                <Text style={tw`text-sm text-gray-600`}>{surah.revelationType} - {surah.ayahs.length} Verses</Text>
+              </View>
+              <Text style={tw`text-purple-800 text-xl`}>{surah.name}</Text>
+            </View>
 
-        {/* Ali 'Imran */}
-        <View style={tw`bg-white rounded-lg p-4 mb-4 flex-row justify-between items-center shadow-sm`}>
-          <View>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Ali 'Imran</Text>
-            <Text style={tw`text-sm text-gray-600`}>Meccan - 200 Verses</Text>
-          </View>
-          <Text style={tw`text-purple-800 text-xl`}>آل عمران</Text>
-        </View>
-
-        {/* An-Nisa */}
-        <View style={tw`bg-white rounded-lg p-4 mb-4 flex-row justify-between items-center shadow-sm`}>
-          <View>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>An-Nisa</Text>
-            <Text style={tw`text-sm text-gray-600`}>Meccan - 176 Verses</Text>
-          </View>
-          <Text style={tw`text-purple-800 text-xl`}>النساء</Text>
-        </View>
+            {/* Dropdown Content */}
+            {expandedSurah === surah.englishName && (
+              <View style={tw`mt-4`}>
+                {surah.ayahs.map((ayah) => (
+                  <Text key={ayah.number} style={tw`text-sm text-gray-800 mb-2`}>
+                    {ayah.number}. {ayah.text}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
       {/* Footer */}
