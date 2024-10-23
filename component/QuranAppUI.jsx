@@ -1,29 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import tw from 'twrnc';
 
-// Custom hook to fetch and store Quran data
 const useQuranData = () => {
   const [quranData, setQuranData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch and store Quran data in AsyncStorage
   useEffect(() => {
     const fetchQuran = async () => {
       try {
-        // Check if the data is already stored in AsyncStorage
         const storedData = await AsyncStorage.getItem('quranData');
         if (storedData) {
-          setQuranData(JSON.parse(storedData)); // If stored, set the data
+          setQuranData(JSON.parse(storedData));
           setLoading(false);
         } else {
-          // Fetch data from the API
           const response = await fetch('https://api.alquran.cloud/v1/quran/en.asad');
           const data = await response.json();
-          await AsyncStorage.setItem('quranData', JSON.stringify(data.data)); // Store the data
+          await AsyncStorage.setItem('quranData', JSON.stringify(data.data));
           setQuranData(data.data);
           setLoading(false);
         }
@@ -41,11 +37,10 @@ const useQuranData = () => {
 
 const QuranAppUI = () => {
   const { quranData, loading, error } = useQuranData();
-  const [expandedSurah, setExpandedSurah] = useState(null); // To track which surah is expanded
+  const [expandedSurah, setExpandedSurah] = useState(null);
 
-  // Toggle dropdown for a surah
   const toggleSurah = (surahName) => {
-    setExpandedSurah(expandedSurah === surahName ? null : surahName); // Toggle between open and close
+    setExpandedSurah(expandedSurah === surahName ? null : surahName);
   };
 
   if (loading) {
@@ -58,17 +53,14 @@ const QuranAppUI = () => {
 
   return (
     <View style={tw`flex-1 bg-purple-100 p-4`}>
-      {/* Header */}
       <View style={tw`flex-row justify-between items-center mb-6`}>
         <Text style={tw`text-lg font-bold text-purple-800`}>Quran App</Text>
         <FontAwesome name="search" size={24} color="purple" />
       </View>
 
-      {/* User Greeting */}
       <Text style={tw`text-lg font-semibold text-gray-800 mb-4`}>Assalamu Alaikum</Text>
       <Text style={tw`text-2xl font-bold text-purple-900 mb-8`}>Tanvir Ahassan</Text>
 
-      {/* Background Image */}
       <View style={tw`bg-purple-200 rounded-lg p-4 mb-6 overflow-hidden shadow-lg`}>
         <Image 
           source={{ uri: 'https://i.pinimg.com/736x/81/94/7f/81947f27675dab378e9e73c7d988f659.jpg' }} 
@@ -83,7 +75,6 @@ const QuranAppUI = () => {
       </View>
 
       <ScrollView>
-        {/* Surah Tab Navigation */}
         <View style={tw`flex-row justify-around items-center mt-4 border-b border-gray-300 mb-5`}>
           <View style={tw`items-center`}>
             <Text style={tw`text-purple-700 font-bold`}>Surah</Text>
@@ -100,7 +91,6 @@ const QuranAppUI = () => {
           </View>
         </View>
 
-        {/* Surah List */}
         {quranData && quranData.surahs.map((surah, index) => (
           <TouchableOpacity key={surah.number} onPress={() => toggleSurah(surah.englishName)} style={tw`bg-white rounded-lg p-4 mb-4 shadow-sm`}>
             <View style={tw`flex-row justify-between items-center`}>
@@ -111,7 +101,6 @@ const QuranAppUI = () => {
               <Text style={tw`text-purple-800 text-xl`}>{surah.name}</Text>
             </View>
 
-            {/* Dropdown Content */}
             {expandedSurah === surah.englishName && (
               <View style={tw`mt-4`}>
                 {surah.ayahs.map((ayah) => (
@@ -125,7 +114,6 @@ const QuranAppUI = () => {
         ))}
       </ScrollView>
 
-      {/* Footer */}
       <View style={tw`flex-row justify-around mt-auto bg-white py-4 shadow-sm`}>
         <FontAwesome name="home" size={24} color="purple" />
         <FontAwesome name="book" size={24} color="purple" />
@@ -136,3 +124,4 @@ const QuranAppUI = () => {
 };
 
 export default QuranAppUI;
+
